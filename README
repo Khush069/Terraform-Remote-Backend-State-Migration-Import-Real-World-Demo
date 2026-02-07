@@ -1,1 +1,164 @@
+# Terraform Remote Backend with Azure Blob Storage
+
+## 📌 Project Overview
+
+This project demonstrates **production-grade Terraform state management** using **Azure Blob Storage as a remote backend**. It covers:
+
+* Remote backend configuration
+* Importing existing Azure resources into Terraform state
+* State locking
+* Blob versioning & recovery
+* RBAC-based secure access
+
+This setup reflects **real-world enterprise Terraform practices**.
+
+---
+
+## 🏗 Architecture
+
+**Components used:**
+
+* Terraform
+* Azure Resource Group
+* Azure Storage Account
+* Azure Blob Container (tfstate)
+* Azure RBAC (Data Plane)
+
+```
+Terraform CLI
+   |
+   |  terraform init / plan / apply
+   v
+Azure Blob Storage (Remote Backend)
+   ├── terraform.tfstate (versioned)
+   ├── State Locking
+   └── Soft Delete + Recovery
+```
+
+---
+
+## 📂 Project Structure
+
+```
+terraform-remote-backend-demo/
+├── main.tf
+├── backend.tf
+├── providers.tf
+├── variables.tf
+├── outputs.tf
+├── terraform.tfvars
+├── README.md
+```
+
+---
+
+## 🔐 Remote Backend Configuration
+
+`backend.tf`
+
+```hcl
+terraform {
+  backend "azurerm" {
+    resource_group_name  = "rg-tf-backend"
+    storage_account_name = "tfstatekhush2026"
+    container_name       = "tfstate"
+    key                  = "terraform.tfstate"
+  }
+}
+```
+
+---
+
+## ⚙ Provider Configuration
+
+`providers.tf`
+
+```hcl
+provider "azurerm" {
+  features {}
+}
+```
+
+---
+
+## 📥 Import Existing Azure Resource
+
+Import an already created Resource Group into Terraform state:
+
+```powershell
+terraform import azurerm_resource_group.imported \
+/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/rg-import-demo
+```
+
+Terraform now manages the resource **without recreating it**.
+
+---
+
+## 🔒 State Versioning & Safety
+
+### Enable Blob Versioning
+
+```powershell
+az storage account blob-service-properties update \
+  --account-name tfstatekhush2026 \
+  --enable-versioning true
+```
+
+### Verify State Versions
+
+```powershell
+az storage blob list \
+  --container-name tfstate \
+  --account-name tfstatekhush2026 \
+  --include v \
+  --auth-mode login \
+  --output table
+```
+
+Each `terraform apply` creates a **new version** of `terraform.tfstate`.
+
+---
+
+## 🔑 RBAC (Data Plane Access)
+
+Assign Blob Data permissions to the signed-in user:
+
+```powershell
+az role assignment create \
+  --assignee <USER_OBJECT_ID> \
+  --role "Storage Blob Data Contributor" \
+  --scope /subscriptions/<SUB_ID>/resourceGroups/rg-tf-backend/providers/Microsoft.Storage/storageAccounts/tfstatekhush2026
+```
+
+This avoids using storage account keys and follows **least-privilege access**.
+
+---
+
+## 🧠 Key Learnings
+
+* Terraform state is the **single source of truth**
+* Remote backend prevents state loss and supports team collaboration
+* Blob versioning allows **state rollback & disaster recovery**
+* Import avoids risky resource recreation
+* RBAC > Access Keys for enterprise security
+
+---
+
+## 🚀 Use Cases
+
+* Enterprise Terraform deployments
+* Multi-user Terraform collaboration
+* Secure Infrastructure as Code
+* Interview-ready Terraform project
+
+---
+
+## 📌 Author
+
+**Khushboo Sharma**
+Cloud | Terraform | Azure | Infra Automation
+
+---
+
+⭐ If you found this useful, consider starring the repo and sharing your learnings!
 
